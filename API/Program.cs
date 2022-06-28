@@ -1,31 +1,56 @@
+using Microsoft.EntityFrameworkCore;
+using API.Models;
+using API.Context;
+
 var builder = WebApplication.CreateBuilder(args);
+var connectionString = builder.Configuration.GetConnectionString("Books") ?? "Data Source=Books.db";
+builder.Services.AddSqlite<BookDb>(connectionString);
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
 var app = builder.Build();
 
+app.MapGet("/", () => "Välkommen till mitt API!");
 
-app.UseHttpsRedirection();
+app.MapGet("/books", async (BookDb db) =>
+    await db.Books.ToListAsync());
 
-var summaries = new[]
+app.MapGet("/books/{id}", async (int id, BookDb db) =>
+    await db.Books.FindAsync(id)
+        is Book book
+            ? Results.Ok(book)
+            : Results.NotFound());
+
+app.MapPost("books", async (Book book, BookDb db) =>
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+    db.Books.Add(book);
+    await db.SaveChangesAsync();
 
-app.MapGet("/weatherforecast", () =>
+    return Results.Created($"/books/{book.Id}", book);
+});
+
+app.MapPut("/books/{id}", async (int id, Book inputBook, BookDb db) =>
 {
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateTime.Now.AddDays(index),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+    var book = await db.Books.FindAsync(id);
+
+    if(book is null) return Results.NotFound();
+
+    book.Name = inputBook.Name;
+    book.InStore = inputBook.InStore;
+
+    await db.SaveChangesAsync();
+
+    return Results.NoContent();
+});
+
+app.MapDelete("/books/{id}", async (int id, BookDb db) =>
+{
+    if(await db.Books.FindAsync(id) is Book book)
+    {
+        db.Books.Remove(book);
+        await db.SaveChangesAsync();
+        return Results.Ok(book);
+    }
+    return Results.NotFound();
+});
 
 app.Run();
-
-internal record WeatherForecast(DateTime Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
