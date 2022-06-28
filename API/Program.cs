@@ -11,15 +11,18 @@ var app = builder.Build();
 
 app.MapGet("/", () => "Välkommen till mitt API!");
 
+//Hämta alla böcker
 app.MapGet("/books", async (BookDb db) =>
     await db.Books.ToListAsync());
 
+//Hämta en specifik bok med hjälp av /Id
 app.MapGet("/books/{id}", async (int id, BookDb db) =>
     await db.Books.FindAsync(id)
         is Book book
             ? Results.Ok(book)
             : Results.NotFound());
 
+//Skapa en bok
 app.MapPost("books", async (Book book, BookDb db) =>
 {
     db.Books.Add(book);
@@ -28,6 +31,7 @@ app.MapPost("books", async (Book book, BookDb db) =>
     return Results.Created($"/books/{book.Id}", book);
 });
 
+//Uppdatera en bok
 app.MapPut("/books/{id}", async (int id, Book inputBook, BookDb db) =>
 {
     var book = await db.Books.FindAsync(id);
@@ -35,6 +39,7 @@ app.MapPut("/books/{id}", async (int id, Book inputBook, BookDb db) =>
     if(book is null) return Results.NotFound();
 
     book.Name = inputBook.Name;
+    book.Author = inputBook.Author;
     book.InStore = inputBook.InStore;
 
     await db.SaveChangesAsync();
@@ -42,6 +47,7 @@ app.MapPut("/books/{id}", async (int id, Book inputBook, BookDb db) =>
     return Results.NoContent();
 });
 
+//Ta bort en bok
 app.MapDelete("/books/{id}", async (int id, BookDb db) =>
 {
     if(await db.Books.FindAsync(id) is Book book)
