@@ -9,8 +9,6 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 var app = builder.Build();
 
-app.MapGet("/", () => "Välkommen till mitt API!");
-
 //Hämta alla böcker
 app.MapGet("/books", async (BookDb db) =>
     await db.Books.ToListAsync());
